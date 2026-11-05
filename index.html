@@ -38,7 +38,10 @@
     .results-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
     .count { color: #6c8058; font-size: 14px; font-weight: 700; }
     .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 22px; }
-    .card { min-width: 0; background: white; border: 1px solid var(--line); border-radius: 17px; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+    .card { position: relative; min-width: 0; background: white; border: 1px solid var(--line); border-radius: 17px; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+    .recipe-open { font: inherit; color: inherit; text-align: left; background: none; border: 0; padding: 0; }
+    .recipe-open::after { content: ''; position: absolute; inset: 0; }
+    .card:focus-within { outline: 3px solid #b87939; outline-offset: 4px; }
     .card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px #263b300b; }
     .photo { position: relative; aspect-ratio: 16 / 11; background: #e9ecdf; display: grid; place-items: center; overflow: hidden; }
     .photo img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
@@ -54,6 +57,24 @@
     .retry { margin-top: 20px; background: var(--green); color: white; border: 0; border-radius: 8px; padding: 11px 20px; }
     footer { border-top: 1px solid var(--line); padding: 24px 0; color: #858a7e; font-size: 12px; }
     .footer-inner { display: flex; justify-content: space-between; gap: 15px; }
+    body:has(#recipe-dialog[open]) { overflow: hidden; }
+    .recipe-dialog { width: min(740px, calc(100% - 28px)); max-height: 90dvh; padding: 0; border: 0; border-radius: 20px; background: white; color: var(--ink); box-shadow: 0 24px 90px #0004; }
+    .recipe-dialog::backdrop { background: #17251ed1; }
+    .dialog-toolbar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: white; border-bottom: 1px solid var(--line); }
+    .dialog-toolbar span { font-size: 13px; color: var(--muted); }
+    .dialog-x { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); color: var(--green); font-size: 26px; }
+    .detail-photo { aspect-ratio: 16 / 10; }
+    .detail-photo img { object-fit: contain; }
+    .dialog-content { padding: 28px clamp(20px, 5vw, 36px) 32px; }
+    #detail-title { font-size: clamp(24px, 4vw, 32px); line-height: 1.4; margin: 0 0 24px; }
+    .detail-section { margin-top: 28px; }
+    .detail-section h3 { margin: 0 0 12px; font-size: 17px; }
+    .detail-text { margin: 0; white-space: pre-line; font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; }
+    .detail-steps { margin: 0; padding-left: 26px; }
+    .detail-steps li { padding-left: 6px; margin-bottom: 14px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+    .detail-steps li::marker { color: var(--green); font-weight: 700; }
+    .detail-tip { background: #edf0e5; border-radius: 12px; padding: 20px; }
+    .dialog-close { display: block; margin: 30px 0 0; width: 100%; border: 0; border-radius: 10px; padding: 14px; background: var(--green); color: white; font-weight: 700; }
     [hidden] { display: none !important; }
     @media (max-width: 800px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .header-note { display: none; } .hero { padding-top: 38px; } }
     @media (max-width: 520px) { .wrap { width: calc(100% - 32px); } .header-inner { min-height: 68px; } .hero { flex-direction: column; align-items: stretch; gap: 24px; } .month-box { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; } .month-box label { margin: 0; } select { width: 110px; font-size: 22px; } .ingredients-panel { padding: 23px 20px; } .panel-heading { gap: 8px; } .chip { padding: 9px 16px; } .grid { grid-template-columns: 1fr; gap: 20px; } .footer-inner { flex-direction: column; } .results { padding-top: 28px; } }
@@ -91,6 +112,19 @@
     </section>
   </main>
   <footer><div class="wrap footer-inner"><span>오늘 뭐 먹지? · 매달 새롭게 만나는 제철의 맛</span><span>레시피 및 사진: menu.json · 식품안전나라</span></div></footer>
+  <dialog id="recipe-dialog" class="recipe-dialog" aria-labelledby="detail-title">
+    <div class="dialog-toolbar"><span>제철 레시피 살펴보기</span><button type="button" class="dialog-x" id="dialog-x" aria-label="레시피 팝업 닫기" autofocus>×</button></div>
+    <div id="detail-photo"></div>
+    <div class="dialog-content">
+      <span class="category" id="detail-category"></span>
+      <h2 id="detail-title"></h2>
+      <section class="detail-section"><h3>조리방법</h3><p class="detail-text" id="detail-method"></p></section>
+      <section class="detail-section"><h3>재료</h3><p class="detail-text" id="detail-ingredients"></p></section>
+      <section class="detail-section"><h3>조리순서</h3><ol class="detail-steps" id="detail-steps"></ol><p class="detail-text" id="detail-no-steps" hidden>등록된 조리순서가 없어요.</p></section>
+      <section class="detail-section detail-tip" id="detail-tip-section" hidden><h3>요리 TIP</h3><p class="detail-text" id="detail-tip"></p></section>
+      <button type="button" class="dialog-close" id="dialog-close">닫기</button>
+    </div>
+  </dialog>
   <script>
     'use strict';
     const monthSelect = document.querySelector('#month');
@@ -99,6 +133,7 @@
     const notice = document.querySelector('#notice');
     const status = document.querySelector('#status');
     const count = document.querySelector('#count');
+    const recipeDialog = document.querySelector('#recipe-dialog');
     let data = { seasonal: [], recipes: [] };
     let selectedIngredient = null;
     let loaded = false;
@@ -144,9 +179,9 @@
       }
     }
 
-    function recipeCard(recipe) {
-      const card = element('article', 'card');
+    function recipePhoto(recipe, large = false) {
       const photo = element('div', 'photo');
+      if (large) photo.classList.add('detail-photo');
       const fallback = element('div', 'photo-fallback');
       fallback.innerHTML = '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="32" cy="32" r="22"/><circle cx="32" cy="32" r="15"/><path d="M5 11v14m5-14v14m-5-5h5M7.5 25v28M57 11v42m0-42c-8 7-8 17 0 17"/></svg>';
       fallback.append(element('span', '', '사진을 준비하고 있어요'));
@@ -157,7 +192,7 @@
           if (['http:', 'https:'].includes(url.protocol)) {
             const img = element('img');
             img.alt = recipe.name;
-            img.loading = 'lazy';
+            img.loading = large ? 'eager' : 'lazy';
             img.decoding = 'async';
             img.addEventListener('load', () => { fallback.hidden = true; });
             img.addEventListener('error', () => { img.remove(); });
@@ -166,13 +201,49 @@
           }
         } catch { /* 사진 주소가 없거나 잘못된 경우 기본 이미지를 표시합니다. */ }
       }
+      return photo;
+    }
+
+    function recipeCard(recipe) {
+      const card = element('article', 'card');
+      const photo = recipePhoto(recipe);
       const body = element('div', 'card-body');
-      body.append(element('span', 'category', recipe.category || '기타'), element('h3', '', recipe.name));
+      const title = element('h3');
+      const openButton = element('button', 'recipe-open', recipe.name);
+      openButton.type = 'button';
+      openButton.setAttribute('aria-haspopup', 'dialog');
+      openButton.setAttribute('aria-controls', 'recipe-dialog');
+      openButton.addEventListener('click', () => openRecipe(recipe));
+      title.append(openButton);
+      body.append(element('span', 'category', recipe.category || '기타'), title);
       const seasonalNames = (recipe.seasonal || []).filter(name => data.seasonal.some(item => item.month === Number(monthSelect.value) && item.name === name));
       body.append(element('p', 'card-meta', `제철 재료 · ${seasonalNames.join(', ')}`));
       card.append(photo, body);
       return card;
     }
+
+    function cleanText(value) {
+      return String(value ?? '').replace(/<br\s*\/?\s*>/gi, '\n').trim();
+    }
+
+    function openRecipe(recipe) {
+      document.querySelector('#detail-photo').replaceChildren(recipePhoto(recipe, true));
+      document.querySelector('#detail-title').textContent = recipe.name;
+      document.querySelector('#detail-category').textContent = `요리종류 · ${recipe.category || '기타'}`;
+      document.querySelector('#detail-method').textContent = cleanText(recipe.method) || '등록된 조리방법이 없어요.';
+      document.querySelector('#detail-ingredients').textContent = cleanText(recipe.ingredients_text ?? recipe.ingredients?.text) || '등록된 재료 정보가 없어요.';
+      const steps = Array.isArray(recipe.steps) ? recipe.steps.map(cleanText).filter(Boolean) : [];
+      document.querySelector('#detail-steps').replaceChildren(...steps.map(step => element('li', '', step)));
+      document.querySelector('#detail-no-steps').hidden = steps.length > 0;
+      const tip = cleanText(recipe.tip);
+      document.querySelector('#detail-tip').textContent = tip;
+      document.querySelector('#detail-tip-section').hidden = !tip;
+      recipeDialog.showModal();
+      recipeDialog.scrollTop = 0;
+    }
+
+    document.querySelector('#dialog-x').addEventListener('click', () => recipeDialog.close());
+    document.querySelector('#dialog-close').addEventListener('click', () => recipeDialog.close());
 
     function renderRecipes() {
       const month = Number(monthSelect.value);
