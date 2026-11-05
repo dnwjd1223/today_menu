@@ -38,6 +38,7 @@ async function authPage(options = {}) {
     signOut: async settings => { calls.push(['logout', settings]); return { error: options.logoutError || null }; }
   };
   const sandbox = {
+    handleFavoriteSession() {},
     document: { querySelector: selector => nodes[selector] ||= new Element() },
     window: { supabase: { createClient: (url, key, settings) => { calls.push(['createClient', url, key, settings]); return { auth }; } } },
     fetch: async url => { calls.push(['fetch', url]); return { ok: !options.configError, json: async () => ({ supabaseUrl: 'https://example.supabase.co', supabaseKey: 'sb_publishable_test' }) }; }
