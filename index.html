@@ -9,7 +9,7 @@
     :root { color-scheme: light; --green: #315747; --ink: #263b30; --muted: #73796e; --line: #e3e6dc; --paper: #f8f9f3; }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif; word-break: keep-all; }
-    button, select { font: inherit; }
+    button, select, input { font: inherit; }
     button, select { cursor: pointer; }
     :focus-visible { outline: 3px solid #b87939; outline-offset: 4px; }
     .wrap { width: min(1120px, calc(100% - 48px)); margin: auto; }
@@ -57,7 +57,7 @@
     .retry { margin-top: 20px; background: var(--green); color: white; border: 0; border-radius: 8px; padding: 11px 20px; }
     footer { border-top: 1px solid var(--line); padding: 24px 0; color: #858a7e; font-size: 12px; }
     .footer-inner { display: flex; justify-content: space-between; gap: 15px; }
-    body:has(#recipe-dialog[open]) { overflow: hidden; }
+    body:has(dialog[open]) { overflow: hidden; }
     .recipe-dialog { width: min(740px, calc(100% - 28px)); max-height: 90dvh; padding: 0; border: 0; border-radius: 20px; background: white; color: var(--ink); box-shadow: 0 24px 90px #0004; }
     .recipe-dialog::backdrop { background: #17251ed1; }
     .dialog-toolbar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: white; border-bottom: 1px solid var(--line); }
@@ -75,6 +75,20 @@
     .detail-steps li::marker { color: var(--green); font-weight: 700; }
     .detail-tip { background: #edf0e5; border-radius: 12px; padding: 20px; }
     .dialog-close { display: block; margin: 30px 0 0; width: 100%; border: 0; border-radius: 10px; padding: 14px; background: var(--green); color: white; font-weight: 700; }
+    .header-account { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; min-width: 0; }
+    .account-button { border: 1px solid var(--green); border-radius: 8px; background: var(--green); color: white; padding: 10px 15px; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .account-email { max-width: min(30vw, 250px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .account-status { flex-basis: 100%; margin: 0; text-align: right; font-size: 12px; color: #a33e30; }
+    .auth-dialog { width: min(440px, calc(100% - 28px)); }
+    .auth-form { padding: 28px; }
+    .auth-form h2 { font-size: 26px; margin-bottom: 10px; }
+    .auth-description { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 24px; }
+    .auth-form label { display: block; font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+    .auth-form input { width: 100%; padding: 13px; border: 1px solid #cdd5c6; border-radius: 8px; background: white; color: var(--ink); }
+    .auth-message { font-size: 13px; line-height: 1.7; color: var(--green); margin: 16px 0 0; white-space: pre-line; }
+    .auth-message[data-error="true"] { color: #a33e30; }
+    .auth-switch { display: block; margin: 18px auto 0; padding: 8px; border: 0; background: none; color: var(--green); text-decoration: underline; font-size: 13px; }
+    button:disabled { cursor: wait; opacity: .6; }
     [hidden] { display: none !important; }
     @media (max-width: 800px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .header-note { display: none; } .hero { padding-top: 38px; } }
     @media (max-width: 520px) { .wrap { width: calc(100% - 32px); } .header-inner { min-height: 68px; } .hero { flex-direction: column; align-items: stretch; gap: 24px; } .month-box { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; } .month-box label { margin: 0; } select { width: 110px; font-size: 22px; } .ingredients-panel { padding: 23px 20px; } .panel-heading { gap: 8px; } .chip { padding: 9px 16px; } .grid { grid-template-columns: 1fr; gap: 20px; } .footer-inner { flex-direction: column; } .results { padding-top: 28px; } }
@@ -85,7 +99,12 @@
   <header>
     <div class="wrap header-inner">
       <div class="brand"><span class="brand-icon" aria-hidden="true">✳</span> 오늘 뭐 먹지?</div>
-      <span class="header-note">SEASONAL TABLE</span>
+      <div class="header-account">
+        <span class="account-email" id="account-email" hidden></span>
+        <button type="button" class="account-button" id="login-button" aria-haspopup="dialog" aria-controls="auth-dialog">LOGIN</button>
+        <button type="button" class="account-button" id="logout-button" hidden>LOGOUT</button>
+        <p class="account-status" id="account-status" role="status" hidden></p>
+      </div>
     </div>
   </header>
   <main class="wrap">
@@ -124,6 +143,20 @@
       <section class="detail-section detail-tip" id="detail-tip-section" hidden><h3>요리 TIP</h3><p class="detail-text" id="detail-tip"></p></section>
       <button type="button" class="dialog-close" id="dialog-close">닫기</button>
     </div>
+  </dialog>
+  <dialog id="auth-dialog" class="recipe-dialog auth-dialog" aria-labelledby="auth-title">
+    <div class="dialog-toolbar"><span>오늘 뭐 먹지? 계정</span><button type="button" class="dialog-x" id="auth-close" aria-label="로그인 팝업 닫기">×</button></div>
+    <form id="auth-form" class="auth-form">
+      <h2 id="auth-title">로그인</h2>
+      <p class="auth-description" id="auth-description">이메일과 비밀번호로 로그인해 주세요.</p>
+      <label for="auth-email">이메일</label>
+      <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required autofocus>
+      <label for="auth-password">비밀번호</label>
+      <input id="auth-password" name="password" type="password" autocomplete="current-password" required>
+      <p id="auth-message" class="auth-message" role="status" aria-live="polite" hidden></p>
+      <button type="submit" class="dialog-close" id="auth-submit">로그인</button>
+      <button type="button" class="auth-switch" id="auth-switch">계정이 없으신가요? 회원가입</button>
+    </form>
   </dialog>
   <script>
     'use strict';
@@ -301,6 +334,161 @@
       }
     }
     loadMenu();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    'use strict';
+    const authDialog = document.querySelector('#auth-dialog');
+    const authForm = document.querySelector('#auth-form');
+    const authEmail = document.querySelector('#auth-email');
+    const authPassword = document.querySelector('#auth-password');
+    const authSubmit = document.querySelector('#auth-submit');
+    const authSwitch = document.querySelector('#auth-switch');
+    const authMessage = document.querySelector('#auth-message');
+    const loginButton = document.querySelector('#login-button');
+    const logoutButton = document.querySelector('#logout-button');
+    const accountEmail = document.querySelector('#account-email');
+    const accountStatus = document.querySelector('#account-status');
+    let authMode = 'login';
+    let authBusy = false;
+    let authClient;
+    let authInitialization;
+
+    function setAuthMessage(message = '', isError = false) {
+      authMessage.textContent = message;
+      authMessage.hidden = !message;
+      authMessage.dataset.error = String(isError);
+    }
+
+    function renderAccount(session) {
+      const email = session?.user?.email;
+      loginButton.hidden = Boolean(email);
+      logoutButton.hidden = !email;
+      accountEmail.hidden = !email;
+      accountEmail.textContent = email || '';
+      accountEmail.title = email || '';
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const signup = mode === 'signup';
+      document.querySelector('#auth-title').textContent = signup ? '회원가입' : '로그인';
+      document.querySelector('#auth-description').textContent = signup
+        ? '이메일과 비밀번호로 계정을 만들어보세요.' : '이메일과 비밀번호로 로그인해 주세요.';
+      authSubmit.textContent = signup ? '회원가입' : '로그인';
+      authSwitch.textContent = signup ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입';
+      authPassword.autocomplete = signup ? 'new-password' : 'current-password';
+      authPassword.minLength = signup ? 6 : 1;
+      authPassword.value = '';
+      setAuthMessage();
+    }
+
+    function setAuthBusy(busy) {
+      authBusy = busy;
+      authForm.setAttribute('aria-busy', String(busy));
+      for (const control of [authSubmit, authSwitch, authEmail, authPassword]) control.disabled = busy;
+      authSubmit.textContent = busy ? '처리 중…' : authMode === 'signup' ? '회원가입' : '로그인';
+    }
+
+    function authErrorMessage(error) {
+      const messages = {
+        invalid_credentials: '이메일 또는 비밀번호를 확인해 주세요.',
+        email_not_confirmed: '이메일 인증을 완료한 뒤 로그인해 주세요.',
+        user_already_exists: '이미 등록된 이메일입니다. 로그인해 주세요.',
+        weak_password: '비밀번호가 보안 기준에 맞지 않습니다. 더 긴 비밀번호를 사용해 주세요.',
+        over_email_send_rate_limit: '인증 메일 요청이 많습니다. 잠시 후 다시 시도해 주세요.',
+        over_request_rate_limit: '요청이 많습니다. 잠시 후 다시 시도해 주세요.',
+        signup_disabled: '현재 회원가입이 비활성화되어 있습니다.',
+        email_address_invalid: '올바른 이메일 주소를 입력해 주세요.'
+      };
+      return messages[error.code] || error.message || '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
+    }
+
+    function initializeAuth() {
+      if (authInitialization) return authInitialization;
+      authInitialization = (async () => {
+        if (!window.supabase?.createClient) throw new Error('로그인 모듈을 불러오지 못했어요. 네트워크를 확인하고 새로고침해 주세요.');
+        const response = await fetch('/api/config', { cache: 'no-store' });
+        if (!response.ok) throw new Error('로그인 설정을 불러올 수 없어요. Vercel의 Supabase 환경 변수와 배포 상태를 확인해 주세요.');
+        const config = await response.json();
+        if (!config.supabaseUrl || !config.supabaseKey) throw new Error('Supabase 로그인 설정이 비어 있습니다.');
+        authClient = window.supabase.createClient(config.supabaseUrl, config.supabaseKey, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        });
+        const { data, error } = await authClient.auth.getSession();
+        if (error) throw error;
+        renderAccount(data.session);
+        // 콜백 안에서는 다른 비동기 Auth 메서드를 호출하지 않습니다.
+        authClient.auth.onAuthStateChange((_event, session) => renderAccount(session));
+        accountStatus.hidden = true;
+        return authClient;
+      })().catch(error => {
+        authInitialization = null;
+        throw error;
+      });
+      return authInitialization;
+    }
+
+    loginButton.addEventListener('click', () => {
+      if (!authBusy) setAuthMode('login');
+      authDialog.showModal();
+    });
+    document.querySelector('#auth-close').addEventListener('click', () => authDialog.close());
+    authDialog.addEventListener('close', () => { authPassword.value = ''; });
+    authSwitch.addEventListener('click', () => {
+      if (!authBusy) setAuthMode(authMode === 'login' ? 'signup' : 'login');
+    });
+
+    authForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (authBusy || !authForm.reportValidity()) return;
+      const credentials = { email: authEmail.value.trim(), password: authPassword.value };
+      const mode = authMode;
+      setAuthMessage();
+      setAuthBusy(true);
+      try {
+        const client = await initializeAuth();
+        const { data, error } = mode === 'signup'
+          ? await client.auth.signUp(credentials)
+          : await client.auth.signInWithPassword(credentials);
+        if (error) throw error;
+        authPassword.value = '';
+        if (data.session) {
+          renderAccount(data.session);
+          accountStatus.hidden = true;
+          authDialog.close();
+        } else if (mode === 'signup') {
+          setAuthMode('login');
+          setAuthMessage('가입 요청을 완료했어요. 이메일 인증이 필요한 경우 받은 메일의 인증 링크를 누른 뒤 로그인해 주세요.');
+        }
+      } catch (error) {
+        setAuthMessage(authErrorMessage(error), true);
+      } finally {
+        setAuthBusy(false);
+      }
+    });
+
+    logoutButton.addEventListener('click', async () => {
+      logoutButton.disabled = true;
+      accountStatus.hidden = true;
+      try {
+        const client = await initializeAuth();
+        const { error } = await client.auth.signOut({ scope: 'local' });
+        if (error) throw error;
+        renderAccount(null);
+        authForm.reset();
+      } catch (error) {
+        accountStatus.textContent = authErrorMessage(error);
+        accountStatus.hidden = false;
+      } finally {
+        logoutButton.disabled = false;
+      }
+    });
+
+    initializeAuth().catch(error => {
+      accountStatus.textContent = error.message;
+      accountStatus.hidden = false;
+    });
   </script>
 </body>
 </html>
